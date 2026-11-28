@@ -728,7 +728,20 @@ class Table(Media):
             column_types = _dtypes.TypeRegistry.type_from_dict(
                 json_obj["column_types"], source_artifact
             )
-            # JSON object keys are strings, but column names may be integers.
+            # JSON object keys are strings, but column names may be integers. Two distinct
+            # names that stringify alike cannot share the single type stored under that key.
+            columns_by_key: dict[str, object] = {}
+            for col in json_obj["columns"]:
+                key = str(col)
+                if key in columns_by_key:
+                    existing = columns_by_key[key]
+                    if existing != col or type(existing) is not type(col):
+                        raise ValueError(
+                            f"Table columns {existing!r} and {col!r} both serialize to {key!r}; "
+                            "cannot restore their column types unambiguously"
+                        )
+                else:
+                    columns_by_key[key] = col
             type_map = column_types.params["type_map"]
             column_types.params["type_map"] = {
                 col: type_map[str(col)] for col in json_obj["columns"]

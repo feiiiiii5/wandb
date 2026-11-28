@@ -240,6 +240,28 @@ def test_loading_from_json_with_mixed_types():
     _ = wandb.Table.from_json(json_obj, artifact)
 
 
+def test_loading_from_json_rejects_ambiguous_stringified_columns():
+    json_obj = {
+        "_type": "table",
+        "column_types": {
+            "params": {
+                "type_map": {
+                    "1": {"wb_type": "timestamp"},
+                }
+            },
+            "wb_type": "typedDict",
+        },
+        "columns": [1, "1"],
+        "data": [[1230800400000.0], [1230800400000.0]],
+        "ncols": 2,
+        "nrows": 2,
+    }
+
+    artifact = wandb.Artifact("ambiguous_columns", type="dataset")
+    with pytest.raises(ValueError, match="serialize to '1'"):
+        wandb.Table.from_json(json_obj, artifact)
+
+
 @pytest.mark.parametrize("column", [0, "0"], ids=["integer", "string"])
 @pytest.mark.parametrize(
     ("values", "extra"),
